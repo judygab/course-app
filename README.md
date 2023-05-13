@@ -24,9 +24,9 @@ Here is the list of queries you can run in supabase SQL editor:
     ('Introduction to Artificial Intelligence', 'Learn the basics of artificial intelligence and machine learning.', 'Artificial Intelligence', 59.99),
     ('Database Design and Management', 'Master the principles of database design and management for efficient data storage.', 'Database Management', 34.99);
   ```
-  </details>
+</details>
   
-  <details>
+<details>
 <summary>Create Categories Table</summary>
   ```
     -- Create the categories table
@@ -34,36 +34,31 @@ CREATE TABLE categories (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL
 );
-
 -- Insert sample data into categories table
 INSERT INTO categories (name) VALUES ('Math');
 INSERT INTO categories (name) VALUES ('Science');
 INSERT INTO categories (name) VALUES ('History');
-
   ```
-  </details>
+</details>
   
-    <details>
+<details>
 <summary>Create Course Category Relationship</summary>
   ```
 -- Add a 'category_id' column of type UUID to the 'courses' table
 ALTER TABLE courses ADD COLUMN category_id UUID;
-
 -- Create the courses_categories junction table
 CREATE TABLE courses_categories (
   id SERIAL PRIMARY KEY,
   course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
   category_id INT REFERENCES categories(id) ON DELETE CASCADE
 );
-
 -- Add a unique constraint to prevent duplicate links
 ALTER TABLE courses_categories
 ADD CONSTRAINT unique_course_category
 UNIQUE (course_id, category_id);
   ```
-  </details>
-  
-      <details>
+</details>
+<details>
 <summary>User Management</summary>
 For this step to work don't forget to enable authentication
   ```
@@ -75,23 +70,18 @@ create table profiles (
   full_name text,
   avatar_url text,
   website text,
-
   constraint username_length check (char_length(username) >= 3)
 );
 -- Set up Row Level Security (RLS)
 -- See https://supabase.com/docs/guides/auth/row-level-security for more details.
 alter table profiles
   enable row level security;
-
 create policy "Public profiles are viewable by everyone." on profiles
   for select using (true);
-
 create policy "Users can insert their own profile." on profiles
   for insert with check (auth.uid() = id);
-
 create policy "Users can update own profile." on profiles
   for update using (auth.uid() = id);
-
 -- This trigger automatically creates a profile entry when a new user signs up via Supabase Auth.
 -- See https://supabase.com/docs/guides/auth/managing-user-data#using-triggers for more details.
 create function public.handle_new_user()
@@ -105,35 +95,24 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
-
 -- Set up Storage!
 insert into storage.buckets (id, name)
   values ('avatars', 'avatars');
-
 -- Set up access controls for storage.
 -- See https://supabase.com/docs/guides/storage#policy-examples for more details.
 create policy "Avatar images are publicly accessible." on storage.objects
   for select using (bucket_id = 'avatars');
-
 create policy "Anyone can upload an avatar." on storage.objects
   for insert with check (bucket_id = 'avatars');
   ```
-  </details>
+</details>
   
-      <details>
+<details>
 <summary>Next Auth Schema Setup</summary>
   ```
---
--- Name: next_auth; Type: SCHEMA;
---
 CREATE SCHEMA next_auth;
-
 GRANT USAGE ON SCHEMA next_auth TO service_role;
 GRANT ALL ON SCHEMA next_auth TO postgres;
-
---
--- Create users table
---
 CREATE TABLE IF NOT EXISTS next_auth.users
 (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -144,11 +123,8 @@ CREATE TABLE IF NOT EXISTS next_auth.users
     CONSTRAINT users_pkey PRIMARY KEY (id),
     CONSTRAINT email_unique UNIQUE (email)
 );
-
 GRANT ALL ON TABLE next_auth.users TO postgres;
 GRANT ALL ON TABLE next_auth.users TO service_role;
-
---- uid() function to be used in RLS policies
 CREATE FUNCTION next_auth.uid() RETURNS uuid
     LANGUAGE sql STABLE
     AS $$
@@ -158,10 +134,6 @@ CREATE FUNCTION next_auth.uid() RETURNS uuid
         (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')
     )::uuid
 $$;
-
---
--- Create sessions table
---
 CREATE TABLE IF NOT EXISTS  next_auth.sessions
 (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -175,13 +147,8 @@ CREATE TABLE IF NOT EXISTS  next_auth.sessions
         ON UPDATE NO ACTION
         ON DELETE CASCADE
 );
-
 GRANT ALL ON TABLE next_auth.sessions TO postgres;
 GRANT ALL ON TABLE next_auth.sessions TO service_role;
-
---
--- Create accounts table
---
 CREATE TABLE IF NOT EXISTS  next_auth.accounts
 (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -205,13 +172,8 @@ CREATE TABLE IF NOT EXISTS  next_auth.accounts
         ON UPDATE NO ACTION
         ON DELETE CASCADE
 );
-
 GRANT ALL ON TABLE next_auth.accounts TO postgres;
 GRANT ALL ON TABLE next_auth.accounts TO service_role;
-
---
--- Create verification_tokens table
---
 CREATE TABLE IF NOT EXISTS  next_auth.verification_tokens
 (
     identifier text,
@@ -221,13 +183,11 @@ CREATE TABLE IF NOT EXISTS  next_auth.verification_tokens
     CONSTRAINT token_unique UNIQUE (token),
     CONSTRAINT token_identifier_unique UNIQUE (token, identifier)
 );
-
 GRANT ALL ON TABLE next_auth.verification_tokens TO postgres;
 GRANT ALL ON TABLE next_auth.verification_tokens TO service_role;
   ```
-  </details>
-  
-      <details>
+</details> 
+<details>
 <summary>Create Profiles Table</summary>
   ```
 CREATE TABLE profiles (
@@ -240,14 +200,11 @@ CREATE TABLE profiles (
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
-
 ALTER TABLE profiles ADD COLUMN gender TEXT;
 ALTER TABLE profiles ADD COLUMN birthdate DATE;
-
   ```
-  </details>
-  
-        <details>
+</details>
+<details>
 <summary>Add User Saved Courses to Profiles</summary>
   ```
 -- Create user_saved_courses table
@@ -258,16 +215,13 @@ CREATE TABLE user_saved_courses (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
 -- Add a unique constraint to prevent duplicate saves
 ALTER TABLE user_saved_courses
 ADD CONSTRAINT unique_user_course
 UNIQUE (user_id, course_id);
-
 -- Update courses table to add a 'saved_count' column that tracks the number of times a course has been saved
 ALTER TABLE courses
 ADD COLUMN saved_count INT DEFAULT 0;
-
 -- Update user_saved_courses table to increment the saved_count column of a course when a new saved course is created
 CREATE OR REPLACE FUNCTION increment_saved_count()
 RETURNS TRIGGER AS $$
@@ -278,12 +232,10 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
 CREATE TRIGGER increment_saved_count_trigger
 AFTER INSERT ON user_saved_courses
 FOR EACH ROW
 EXECUTE FUNCTION increment_saved_count();
-
 -- Update user_saved_courses table to decrement the saved_count column of a course when a saved course is deleted
 CREATE OR REPLACE FUNCTION decrement_saved_count()
 RETURNS TRIGGER AS $$
@@ -294,15 +246,12 @@ BEGIN
   RETURN OLD;
 END;
 $$ LANGUAGE plpgsql;
-
 CREATE TRIGGER decrement_saved_count_trigger
 AFTER DELETE ON user_saved_courses
 FOR EACH ROW
 EXECUTE FUNCTION decrement_saved_count();
-
-
   ```
-  </details>
+</details>
 
 
 
